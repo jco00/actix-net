@@ -183,6 +183,15 @@ impl ServerInner {
     }
 
     fn run_sync(mut builder: ServerBuilder) -> io::Result<(Self, ServerEventMultiplexer)> {
+        for (_, name, lst) in &builder.sockets {
+            info!(
+                r#"starting service: "{}", workers: {}, listening on: {}"#,
+                name,
+                builder.threads,
+                lst.local_addr()
+            );
+        }
+        
         let sockets = mem::take(&mut builder.sockets)
             .into_iter()
             .map(|t| (t.0, t.2))
@@ -196,15 +205,6 @@ impl ServerInner {
             (true, _) => info!("Actix runtime found; starting in Actix runtime"),
             (_, true) => info!("Tokio runtime found; starting in existing Tokio runtime"),
             (_, false) => panic!("Actix or Tokio runtime not found; halting"),
-        }
-
-        for (_, name, lst) in &builder.sockets {
-            info!(
-                r#"starting service: "{}", workers: {}, listening on: {}"#,
-                name,
-                builder.threads,
-                lst.local_addr()
-            );
         }
 
         let (waker_queue, worker_handles, accept_handle) = Accept::start(sockets, &builder)?;
